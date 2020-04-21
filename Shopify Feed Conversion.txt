@@ -1,0 +1,170 @@
+Sub Shopify_to_ShareASale()
+
+'ENTER MERCHANT ID and PLACEHOLDER CATEGORY/SUBCATEGORY VARIABLES
+    Dim merchantID As Variant
+    merchantID = InputBox("Enter Your ShareASale Merchant ID")
+    Dim category As Variant
+    category = InputBox("Enter a Default Product Category Value - Must be a Number")
+    Dim subCategory As Variant
+    subCategory = InputBox("Enter a Default Product Sub Category Value - Must be a Number")
+    Dim path As Variant
+    path = InputBox("Enter Your Website URL")
+
+'Step 1: Delete Columns Not Matching ShareASale Format (NOT WORKING ON MAC)
+    Dim currentColumn As Integer
+    Dim columnHeading As String
+
+    ActiveSheet.Columns("L").Delete
+
+    For currentColumn = ActiveSheet.UsedRange.Columns.Count To 1 Step -1
+
+        columnHeading = ActiveSheet.UsedRange.Cells(1, currentColumn).Value
+
+        Select Case columnHeading
+            Case "Handle", "Title", "Variant SKU", "Body (HTML)", "Image Src", "Variant Price", "Type", "Tags"
+            Case Else
+                If InStr(1, _
+                   ActiveSheet.UsedRange.Cells(1, currentColumn).Value, _
+                   "ABCXYZ", vbBinaryCompare) = 0 Then
+
+                    ActiveSheet.Columns(currentColumn).Delete
+
+                End If
+        End Select
+    Next
+
+'Step 2: Delete Rows With Empty and Duplicate SKU Values
+Columns("F:F").Select
+Set rngRange = Selection.CurrentRegion
+lngNumRows = rngRange.Rows.Count
+lngFirstRow = rngRange.Row
+lngLastRow = lngFirstRow + lngNumRows - 1
+lngCompareColumn = ActiveCell.Column
+For lngCurrentRow = lngLastRow To lngFirstRow Step -1
+If (Cells(lngCurrentRow, lngCompareColumn).Text = "") Then _
+Rows(lngCurrentRow).Delete
+Next lngCurrentRow
+    ActiveSheet.Range("A:AX").RemoveDuplicates Columns:=6, Header:=xlNo
+
+'Step 3: Rearrange Remaining Columns
+    Columns("C:C").Cut Destination:=Columns("K:K")
+    Columns("A:A").Cut Destination:=Columns("C:C")
+    Columns("D:D").Cut Destination:=Columns("V:V")
+    Columns("E:E").Cut Destination:=Columns("L:L")
+    Columns("F:F").Cut Destination:=Columns("A:A")
+    Columns("G:G").Cut Destination:=Columns("D:D")
+    Columns("H:H").Cut Destination:=Columns("F:F")
+
+'Step 4: Build Out Product URLs
+Range("C:C").Select
+Range("C2").Activate
+Dim c As Range
+For Each c In Selection
+If c.Value <> "" Then c.Value = "https://" & path & "/products/" & c.Value
+Next
+
+'Step 5: Add ShareASale Headers
+[A1].Value = "SKU"
+[B1].Value = "Name"
+[C1].Value = "URL"
+[D1].Value = "Price"
+[E1].Value = "RetailPrice"
+[F1].Value = "FullImage"
+[G1].Value = "ThumbnailImage"
+[H1].Value = "Commission"
+[I1].Value = "Category"
+[J1].Value = "Subcategory"
+[K1].Value = "Description"
+[L1].Value = "SearchTerms"
+[M1].Value = "Status"
+[N1].Value = "MerchantID"
+[O1].Value = "Custom1"
+[P1].Value = "Custom2"
+[Q1].Value = "Custom3"
+[R1].Value = "Custom4"
+[S1].Value = "Custom5"
+[T1].Value = "Manufacturer"
+[U1].Value = "PartNumber"
+[V1].Value = "MerchantCategory"
+[W1].Value = "MerchantSubcategory"
+[X1].Value = "ShortDescription"
+[Y1].Value = "ISBN"
+[Z1].Value = "UPC"
+[AA1].Value = "CrossSell"
+[AB1].Value = "MerchantGroup"
+[AC1].Value = "MerchantSubgroup"
+[AD1].Value = "CompatibleWith"
+[AE1].Value = "CompareTo"
+[AF1].Value = "QuantityDiscount"
+[AG1].Value = "Bestseller"
+[AH1].Value = "AddToCartURL"
+[AI1].Value = "ReviewsRSSURL"
+[AJ1].Value = "Option1"
+[AK1].Value = "Option2"
+[AL1].Value = "Option3"
+[AM1].Value = "Option4"
+[AN1].Value = "Option5"
+[AO1].Value = "customCommissions"
+[AP1].Value = "customCommissionisFlatRate"
+[AQ1].Value = "customCommissionNewCustomerMultiplier"
+[AR1].Value = "mobileURL"
+[AS1].Value = "mobileImage"
+[AT1].Value = "mobileThumbnail"
+[AU1].Value = "ReservedForFutureUse"
+[AV1].Value = "ReservedForFutureUse"
+[AW1].Value = "ReservedForFutureUse"
+[AX1].Value = "ReservedForFutureUse"
+
+'Step 6: Add Merchant ID and Placeholder Category/Subcategory Integers
+    Dim LastRow As Long
+    LastRow = Cells(Rows.Count, "A").End(xlUp).Row
+    Range("N2:N" & LastRow).Value = merchantID
+    Range("I2:I" & LastRow).Value = category
+    Range("J2:J" & LastRow).Value = subCategory
+
+'Step 7: Clean Out HTML, Line Breaks and Encoded Characters, Link Validation
+Dim sht As Worksheet
+Dim fndList As Variant
+Dim rplcList As Variant
+Dim x As Long
+
+fndList = Array("<*>", "Â", "€“", "&amp;", "ï»¿", "//products", "&lt;", "&gt;", "https://https://", "https://http://")
+rplcList = Array("", "", "", "&", "", "/products", "<", ">", "https://", "http://")
+
+  For x = LBound(fndList) To UBound(fndList)
+      For Each sht In ActiveWorkbook.Worksheets
+        sht.Cells.Replace What:=fndList(x), Replacement:=rplcList(x), _
+          LookAt:=xlPart, SearchOrder:=xlByRows, MatchCase:=False, _
+          SearchFormat:=False, ReplaceFormat:=False
+      Next sht
+
+' Not Working in MAC  
+  Next x
+    Cells.Replace What:="" & Chr(10) & "", Replacement:=" ", LookAt:=xlPart, SearchOrder _
+        :=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+    Cells.Replace What:="" & Chr(160) & "", Replacement:=" ", LookAt:=xlPart, SearchOrder _
+        :=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+
+'Step 8: Make it Look Nice (Disables Excel's Text Wrapping and Runs TRIM on Description Column)
+    Range("A:AX").Select
+    Range("A1").Activate
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlBottom
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+
+Range("AX:AX").Formula = "=TRIM(K1)"
+Range("AX:AX").Formula = Range("AX:AX").Value
+Columns("AX:AX").Cut Destination:=Columns("K:K")
+[AY1].Value = "ReservedForFutureUse"
+
+End Sub
+
+
